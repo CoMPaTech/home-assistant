@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS,
@@ -26,12 +27,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from .coordinator import (
-    AirOSConfigEntry,
-    AirOSData,
-    AirOSDataCoordinator,
-    AirOSRuntimeData,
-)
+from .coordinator import AirOSData, AirOSRuntimeData
 from .entity import AirOSEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -168,15 +164,12 @@ SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: AirOSConfigEntry[AirOSRuntimeData],
+    config_entry: ConfigEntry[AirOSRuntimeData],
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the AirOS sensors from a config entry."""
-    runtime_data = config_entry.runtime_data
-    coordinator = runtime_data.data_coordinator
-
     async_add_entities(
-        AirOSSensor(coordinator, runtime_data, description) for description in SENSORS
+        AirOSSensor(config_entry.runtime_data, description) for description in SENSORS
     )
 
 
@@ -187,17 +180,20 @@ class AirOSSensor(AirOSEntity, SensorEntity):
 
     def __init__(
         self,
-        coordinator: AirOSDataCoordinator,
         runtime_data: AirOSRuntimeData,
         description: AirOSSensorEntityDescription,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator, runtime_data)
+        super().__init__(runtime_data.data_coordinator, runtime_data)
 
         self.entity_description = description
-        self._attr_unique_id = f"{coordinator.data.derived.mac}_{description.key}"
+        self._attr_unique_id = (
+            f"{runtime_data.data_coordinator.data.derived.mac}_{description.key}"
+        )
 
     @property
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
-        return self.entity_description.value_fn(self.coordinator.data)
+        return self.entity_description.value_fn(
+            self._runtime_data.data_coordinator.data
+        )

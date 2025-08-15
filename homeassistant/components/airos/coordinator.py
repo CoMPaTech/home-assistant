@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import timedelta
 import logging
-from typing import Any, TypeVar, NamedTuple
+from typing import Any, NamedTuple, TypeVar
 
 from airos.airos8 import AirOS, AirOSData
 from airos.exceptions import (
@@ -24,29 +24,28 @@ from .const import DOMAIN, SCAN_INTERVAL, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
-AirOSRuntimeData = NamedTuple(
-    "AirOSRuntimeData", ["data_coordinator", "update_coordinator"]
-)
-
-DataT = TypeVar("DataT")
-type AirOSConfigEntry = ConfigEntry[AirOSRuntimeData]
+T = TypeVar("T")
 
 
-class AirOSBaseCoordinator(DataUpdateCoordinator[DataT], ABC):
+class AirOSRuntimeData(NamedTuple):
+    """Runtime data for airOS."""
+
+    data_coordinator: AirOSDataCoordinator
+    update_coordinator: AirOSUpdateCoordinator
+
+
+class AirOSBaseCoordinator(DataUpdateCoordinator[T], ABC):
     """Base class to manage fetching data from AirOS endpoints."""
-
-    config_entry: AirOSConfigEntry
 
     def __init__(
         self,
         hass: HomeAssistant,
-        config_entry: AirOSConfigEntry,
+        config_entry: ConfigEntry,
         airos_device: AirOS,
         name: str,
         update_interval: timedelta,
     ) -> None:
         """Initialize the coordinator."""
-        self.airos_device = airos_device
         super().__init__(
             hass,
             _LOGGER,
@@ -54,8 +53,9 @@ class AirOSBaseCoordinator(DataUpdateCoordinator[DataT], ABC):
             update_interval=update_interval,
             config_entry=config_entry,
         )
+        self.airos_device = airos_device
 
-    async def _async_update_data(self) -> DataT:
+    async def _async_update_data(self) -> T:
         """Fetch data from AirOS."""
         try:
             await self.airos_device.login()
@@ -83,8 +83,8 @@ class AirOSBaseCoordinator(DataUpdateCoordinator[DataT], ABC):
             ) from err
 
     @abstractmethod
-    async def _async_fetch_data(self) -> DataT:
-        """Function for subclasses on specific data fetch."""
+    async def _async_fetch_data(self) -> T:
+        """Abstract method to be implemented by child classes."""
 
 
 class AirOSDataCoordinator(AirOSBaseCoordinator[AirOSData]):
@@ -110,10 +110,8 @@ class AirOSDataCoordinator(AirOSBaseCoordinator[AirOSData]):
 class AirOSUpdateCoordinator(AirOSBaseCoordinator[dict[str, Any]]):
     """Class to manage fetching AirOS update data."""
 
-    config_entry: AirOSConfigEntry
-
     def __init__(
-        self, hass: HomeAssistant, config_entry: AirOSConfigEntry, airos_device: AirOS
+        self, hass: HomeAssistant, config_entry: ConfigEntry, airos_device: AirOS
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(

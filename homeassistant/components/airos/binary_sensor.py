@@ -11,16 +11,12 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .coordinator import (
-    AirOSConfigEntry,
-    AirOSData,
-    AirOSDataCoordinator,
-    AirOSRuntimeData,
-)
+from .coordinator import AirOSData, AirOSRuntimeData
 from .entity import AirOSEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -78,15 +74,12 @@ BINARY_SENSORS: tuple[AirOSBinarySensorEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: AirOSConfigEntry[AirOSRuntimeData],
+    config_entry: ConfigEntry[AirOSRuntimeData],
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the AirOS binary sensors from a config entry."""
-    runtime_data = config_entry.runtime_data
-    coordinator = runtime_data.data_coordinator
-
     async_add_entities(
-        AirOSBinarySensor(coordinator, runtime_data, description)
+        AirOSBinarySensor(config_entry.runtime_data, description)
         for description in BINARY_SENSORS
     )
 
@@ -98,17 +91,20 @@ class AirOSBinarySensor(AirOSEntity, BinarySensorEntity):
 
     def __init__(
         self,
-        coordinator: AirOSDataCoordinator,
         runtime_data: AirOSRuntimeData,
         description: AirOSBinarySensorEntityDescription,
     ) -> None:
         """Initialize the binary sensor."""
-        super().__init__(coordinator, runtime_data)
+        super().__init__(runtime_data.data_coordinator, runtime_data)
 
         self.entity_description = description
-        self._attr_unique_id = f"{coordinator.data.host.device_id}_{description.key}"
+        self._attr_unique_id = (
+            f"{runtime_data.data_coordinator.data.host.device_id}_{description.key}"
+        )
 
     @property
     def is_on(self) -> bool:
         """Return the state of the binary sensor."""
-        return self.entity_description.value_fn(self.coordinator.data)
+        return self.entity_description.value_fn(
+            self._runtime_data.data_coordinator.data
+        )

@@ -20,6 +20,12 @@ def ap_fixture():
 
 
 @pytest.fixture
+def update_fixture():
+    """Load fixture data for available update."""
+    return load_json_object_fixture("update_check_available.json", DOMAIN)
+
+
+@pytest.fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""
     with patch(

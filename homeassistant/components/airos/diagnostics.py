@@ -5,10 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
-
-from .coordinator import AirOSConfigEntry
 
 IP_REDACT = ["addr", "ipaddr", "ip6addr", "lastip"]  # IP related
 HW_REDACT = ["apmac", "hwaddr", "mac"]  # MAC address
@@ -24,7 +23,7 @@ TO_REDACT_AIROS = [
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: AirOSConfigEntry
+    hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     return {

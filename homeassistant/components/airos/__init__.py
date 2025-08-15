@@ -4,16 +4,12 @@ from __future__ import annotations
 
 from airos.airos8 import AirOS
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .coordinator import (
-    AirOSConfigEntry,
-    AirOSDataCoordinator,
-    AirOSRuntimeData,
-    AirOSUpdateCoordinator,
-)
+from .coordinator import AirOSDataCoordinator, AirOSRuntimeData, AirOSUpdateCoordinator
 
 _PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -22,7 +18,7 @@ _PLATFORMS: list[Platform] = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: AirOSConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Ubiquiti airOS from a config entry."""
 
     # By default airOS 8 comes with self-signed SSL certificates,
@@ -54,6 +50,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirOSConfigEntry) -> boo
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: AirOSConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, _PLATFORMS)

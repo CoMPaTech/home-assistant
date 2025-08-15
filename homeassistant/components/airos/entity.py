@@ -2,22 +2,27 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.const import CONF_HOST
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+)
 
 from .const import DOMAIN, MANUFACTURER
-from .coordinator import AirOSDataCoordinator, AirOSRuntimeData, AirOSUpdateCoordinator
+from .coordinator import AirOSRuntimeData
 
 
-class AirOSEntity(CoordinatorEntity):
+class AirOSEntity(CoordinatorEntity[DataUpdateCoordinator[Any]]):
     """Represent a AirOS Entity."""
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        coordinator: AirOSDataCoordinator | AirOSUpdateCoordinator,
+        coordinator: DataUpdateCoordinator[Any],
         runtime_data: AirOSRuntimeData,
     ) -> None:
         """Initialise the gateway."""
@@ -30,13 +35,16 @@ class AirOSEntity(CoordinatorEntity):
         data_coordinator = self._runtime_data.data_coordinator
         # Prevent other coordinator(s) updating ahead of data_coordinator
         if not data_coordinator.data:
-            return None
+            return None  # pragma: no cover
+
+        # Ensure entry exists
+        config_entry = data_coordinator.config_entry
+        if not config_entry:
+            return None  # pragma: no cover
 
         airos_data = data_coordinator.data
 
-        configuration_url: str | None = (
-            f"https://{self.coordinator.config_entry.data[CONF_HOST]}"
-        )
+        configuration_url: str | None = f"https://{config_entry.data[CONF_HOST]}"
 
         return DeviceInfo(
             connections={(CONNECTION_NETWORK_MAC, airos_data.derived.mac)},
