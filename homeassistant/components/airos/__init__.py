@@ -8,11 +8,17 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platfor
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .coordinator import AirOSConfigEntry, AirOSDataUpdateCoordinator
+from .coordinator import (
+    AirOSConfigEntry,
+    AirOSDataCoordinator,
+    AirOSRuntimeData,
+    AirOSUpdateCoordinator,
+)
 
 _PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
+    Platform.UPDATE,
 ]
 
 
@@ -30,10 +36,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirOSConfigEntry) -> boo
         session=session,
     )
 
-    coordinator = AirOSDataUpdateCoordinator(hass, entry, airos_device)
-    await coordinator.async_config_entry_first_refresh()
+    # Initialize main status update coordinator
+    data_coordinator = AirOSDataCoordinator(hass, entry, airos_device)
+    await data_coordinator.async_config_entry_first_refresh()
 
-    entry.runtime_data = coordinator
+    # Initialize update checker
+    update_coordinator = AirOSUpdateCoordinator(hass, entry, airos_device)
+    await update_coordinator.async_config_entry_first_refresh()
+
+    entry.runtime_data = AirOSRuntimeData(
+        data_coordinator=data_coordinator,
+        update_coordinator=update_coordinator,
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
 

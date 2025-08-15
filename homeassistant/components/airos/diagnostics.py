@@ -29,5 +29,8 @@ async def async_get_config_entry_diagnostics(
     """Return diagnostics for a config entry."""
     return {
         "entry_data": async_redact_data(entry.data, TO_REDACT_HA),
-        "data": async_redact_data(entry.runtime_data.data.to_dict(), TO_REDACT_AIROS),
+        "data": async_redact_data(
+            entry.runtime_data.data_coordinator.data.to_dict(), TO_REDACT_AIROS
+        ),
+        "update": entry.runtime_data.update_coordinator.data,
     }

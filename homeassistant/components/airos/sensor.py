@@ -26,7 +26,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from .coordinator import AirOSConfigEntry, AirOSData, AirOSDataUpdateCoordinator
+from .coordinator import (
+    AirOSConfigEntry,
+    AirOSData,
+    AirOSDataCoordinator,
+    AirOSRuntimeData,
+)
 from .entity import AirOSEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -163,13 +168,16 @@ SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: AirOSConfigEntry,
+    config_entry: AirOSConfigEntry[AirOSRuntimeData],
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the AirOS sensors from a config entry."""
-    coordinator = config_entry.runtime_data
+    runtime_data = config_entry.runtime_data
+    coordinator = runtime_data.data_coordinator
 
-    async_add_entities(AirOSSensor(coordinator, description) for description in SENSORS)
+    async_add_entities(
+        AirOSSensor(coordinator, runtime_data, description) for description in SENSORS
+    )
 
 
 class AirOSSensor(AirOSEntity, SensorEntity):
@@ -179,11 +187,12 @@ class AirOSSensor(AirOSEntity, SensorEntity):
 
     def __init__(
         self,
-        coordinator: AirOSDataUpdateCoordinator,
+        coordinator: AirOSDataCoordinator,
+        runtime_data: AirOSRuntimeData,
         description: AirOSSensorEntityDescription,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, runtime_data)
 
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.data.derived.mac}_{description.key}"
