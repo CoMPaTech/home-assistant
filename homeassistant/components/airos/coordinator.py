@@ -22,6 +22,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import DOMAIN, SCAN_INTERVAL, UPDATE_INTERVAL
 
+type AirOSConfigEntry = ConfigEntry[AirOSRuntimeData]
+
 _LOGGER = logging.getLogger(__name__)
 
 T = TypeVar("T")

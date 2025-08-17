@@ -11,12 +11,11 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .coordinator import AirOSData, AirOSRuntimeData
+from .coordinator import AirOSConfigEntry, AirOSData, AirOSRuntimeData
 from .entity import AirOSEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,7 +73,7 @@ BINARY_SENSORS: tuple[AirOSBinarySensorEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry[AirOSRuntimeData],
+    config_entry: AirOSConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the AirOS binary sensors from a config entry."""

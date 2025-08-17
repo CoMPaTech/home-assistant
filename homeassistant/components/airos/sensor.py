@@ -14,7 +14,6 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS,
@@ -27,7 +26,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from .coordinator import AirOSData, AirOSRuntimeData
+from .coordinator import AirOSConfigEntry, AirOSData, AirOSRuntimeData
 from .entity import AirOSEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -164,7 +163,7 @@ SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry[AirOSRuntimeData],
+    config_entry: AirOSConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the AirOS sensors from a config entry."""

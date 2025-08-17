@@ -5,11 +5,10 @@ from __future__ import annotations
 import logging
 
 from homeassistant.components.update import UpdateEntity, UpdateEntityFeature
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .coordinator import AirOSRuntimeData
+from .coordinator import AirOSConfigEntry, AirOSRuntimeData
 from .entity import AirOSEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -17,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry[AirOSRuntimeData],
+    config_entry: AirOSConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the AirOS update platform."""
