@@ -12,6 +12,7 @@ from airos.exceptions import (
     AirOSDeviceConnectionError,
     AirOSKeyDataMissingError,
 )
+from airos.helpers import DetectDeviceData, async_get_firmware_data
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
@@ -19,7 +20,6 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
-from .coordinator import AirOS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,15 +48,13 @@ class AirOSConfigFlow(ConfigFlow, domain=DOMAIN):
             # with no option in the web UI to change or upload a custom certificate.
             session = async_get_clientsession(self.hass, verify_ssl=False)
 
-            airos_device = AirOS(
-                host=user_input[CONF_HOST],
-                username=user_input[CONF_USERNAME],
-                password=user_input[CONF_PASSWORD],
-                session=session,
-            )
             try:
-                await airos_device.login()
-                airos_data = await airos_device.status()
+                device_data: DetectDeviceData = await async_get_firmware_data(
+                    host=user_input[CONF_HOST],
+                    username=user_input[CONF_USERNAME],
+                    password=user_input[CONF_PASSWORD],
+                    session=session,
+                )
 
             except (
                 AirOSConnectionSetupError,
@@ -71,10 +69,10 @@ class AirOSConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                await self.async_set_unique_id(airos_data.derived.mac)
+                await self.async_set_unique_id(device_data["mac"])
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
-                    title=airos_data.host.hostname, data=user_input
+                    title=device_data["hostname"], data=user_input
                 )
 
         return self.async_show_form(

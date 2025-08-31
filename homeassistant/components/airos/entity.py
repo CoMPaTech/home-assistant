@@ -21,6 +21,10 @@ class AirOSEntity(CoordinatorEntity[AirOSDataUpdateCoordinator]):
 
         airos_data = self.coordinator.data
 
+        _identifier = coordinator.data.derived.mac
+        if coordinator.device_data.get("fw_major") == 8:
+            _identifier = coordinator.data.host.device_id  # type: ignore[union-attr]
+
         configuration_url: str | None = (
             f"https://{coordinator.config_entry.data[CONF_HOST]}"
         )
@@ -28,7 +32,7 @@ class AirOSEntity(CoordinatorEntity[AirOSDataUpdateCoordinator]):
         self._attr_device_info = DeviceInfo(
             connections={(CONNECTION_NETWORK_MAC, airos_data.derived.mac)},
             configuration_url=configuration_url,
-            identifiers={(DOMAIN, str(airos_data.host.device_id))},
+            identifiers={(DOMAIN, str(_identifier))},
             manufacturer=MANUFACTURER,
             model=airos_data.host.devmodel,
             name=airos_data.host.hostname,

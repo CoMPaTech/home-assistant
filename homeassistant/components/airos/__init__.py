@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from airos.airos8 import AirOS
+from airos.airos6 import AirOS6
+from airos.airos8 import AirOS8
+from airos.helpers import DetectDeviceData, async_get_firmware_data
 
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
@@ -23,14 +25,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirOSConfigEntry) -> boo
     # with no option in the web UI to change or upload a custom certificate.
     session = async_get_clientsession(hass, verify_ssl=False)
 
-    airos_device = AirOS(
-        host=entry.data[CONF_HOST],
-        username=entry.data[CONF_USERNAME],
-        password=entry.data[CONF_PASSWORD],
-        session=session,
-    )
+    conn_data = {
+        CONF_HOST: entry.data[CONF_HOST],
+        CONF_USERNAME: entry.data[CONF_USERNAME],
+        CONF_PASSWORD: entry.data[CONF_PASSWORD],
+        "session": session,
+    }
 
-    coordinator = AirOSDataUpdateCoordinator(hass, entry, airos_device)
+    # Determine firmware version before creating the device instance
+    device_data: DetectDeviceData = await async_get_firmware_data(**conn_data)
+    airos_class: type[AirOS8 | AirOS6] = AirOS8
+    if device_data["fw_major"] == 6:
+        airos_class = AirOS6
+
+    airos_device = airos_class(**conn_data)
+
+    coordinator = AirOSDataUpdateCoordinator(hass, entry, device_data, airos_device)
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator

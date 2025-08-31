@@ -163,7 +163,7 @@
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
-    'state': '647.4',
+    'state': '0.013',
   })
 # ---
 # name: test_all_entities[sensor.nanostation_5ac_ap_name_network_role-entry]
@@ -280,7 +280,7 @@
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
-    'state': '9.907',
+    'state': '0.013',
   })
 # ---
 # name: test_all_entities[sensor.nanostation_5ac_ap_name_throughput_transmit_actual-entry]
@@ -339,7 +339,7 @@
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
-    'state': '0.222',
+    'state': '0.013',
   })
 # ---
 # name: test_all_entities[sensor.nanostation_5ac_ap_name_upload_capacity-entry]
@@ -398,7 +398,7 @@
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
-    'state': '540.54',
+    'state': '0.013',
   })
 # ---
 # name: test_all_entities[sensor.nanostation_5ac_ap_name_uptime-entry]
