@@ -5,8 +5,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 import logging
+from typing import Generic, TypeVar
 
-from airos.data import DerivedWirelessMode, DerivedWirelessRole, NetRole
+from airos.data import (
+    AirOS8Data,
+    AirOSDataBaseClass,
+    DerivedWirelessMode,
+    DerivedWirelessRole,
+    NetRole,
+)
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -26,7 +33,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
-from .coordinator import AirOSConfigEntry, AirOSDataDetect, AirOSDataUpdateCoordinator
+from .coordinator import AirOSConfigEntry, AirOSDataUpdateCoordinator
 from .entity import AirOSEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,13 +44,17 @@ WIRELESS_ROLE_OPTIONS = [mode.value for mode in DerivedWirelessRole]
 
 PARALLEL_UPDATES = 0
 
+AirOSDataModel = TypeVar("AirOSDataModel", bound=AirOSDataBaseClass)
+
 
 @dataclass(frozen=True, kw_only=True)
-class AirOSSensorEntityDescription(SensorEntityDescription):
+class AirOSSensorEntityDescription(SensorEntityDescription, Generic[AirOSDataModel]):
     """Describe an AirOS sensor."""
 
-    value_fn: Callable[[AirOSDataDetect], StateType]
+    value_fn: Callable[[AirOSDataModel], StateType]
 
+
+AirOS8SensorEntityDescription = AirOSSensorEntityDescription[AirOS8Data]
 
 COMMON_SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
     AirOSSensorEntityDescription(
@@ -112,16 +123,16 @@ COMMON_SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
     ),
 )
 
-AIROS8_SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
-    AirOSSensorEntityDescription(
+AIROS8_SENSORS: tuple[AirOS8SensorEntityDescription, ...] = (
+    AirOS8SensorEntityDescription(
         key="wireless_antenna_gain",
         translation_key="wireless_antenna_gain",
         native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS,
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: data.wireless.antenna_gain,  # type: ignore[union-attr]
+        value_fn=lambda data: data.wireless.antenna_gain,
     ),
-    AirOSSensorEntityDescription(
+    AirOS8SensorEntityDescription(
         key="wireless_throughput_tx",
         translation_key="wireless_throughput_tx",
         native_unit_of_measurement=UnitOfDataRate.KILOBITS_PER_SECOND,
@@ -129,9 +140,9 @@ AIROS8_SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         suggested_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
-        value_fn=lambda data: data.wireless.antenna_gain,  # type: ignore[union-attr]
+        value_fn=lambda data: data.wireless.antenna_gain,
     ),
-    AirOSSensorEntityDescription(
+    AirOS8SensorEntityDescription(
         key="wireless_throughput_rx",
         translation_key="wireless_throughput_rx",
         native_unit_of_measurement=UnitOfDataRate.KILOBITS_PER_SECOND,
@@ -139,9 +150,9 @@ AIROS8_SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         suggested_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
-        value_fn=lambda data: data.wireless.antenna_gain,  # type: ignore[union-attr]
+        value_fn=lambda data: data.wireless.antenna_gain,
     ),
-    AirOSSensorEntityDescription(
+    AirOS8SensorEntityDescription(
         key="wireless_polling_dl_capacity",
         translation_key="wireless_polling_dl_capacity",
         native_unit_of_measurement=UnitOfDataRate.KILOBITS_PER_SECOND,
@@ -149,9 +160,9 @@ AIROS8_SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         suggested_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
-        value_fn=lambda data: data.wireless.antenna_gain,  # type: ignore[union-attr]
+        value_fn=lambda data: data.wireless.antenna_gain,
     ),
-    AirOSSensorEntityDescription(
+    AirOS8SensorEntityDescription(
         key="wireless_polling_ul_capacity",
         translation_key="wireless_polling_ul_capacity",
         native_unit_of_measurement=UnitOfDataRate.KILOBITS_PER_SECOND,
@@ -159,7 +170,7 @@ AIROS8_SENSORS: tuple[AirOSSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         suggested_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
-        value_fn=lambda data: data.wireless.antenna_gain,  # type: ignore[union-attr]
+        value_fn=lambda data: data.wireless.antenna_gain,
     ),
 )
 
@@ -172,14 +183,14 @@ async def async_setup_entry(
     """Set up the AirOS sensors from a config entry."""
     coordinator = config_entry.runtime_data
 
-    entities = [AirOSSensor(coordinator, description) for description in COMMON_SENSORS]
+    async_add_entities(
+        AirOSSensor(coordinator, description) for description in COMMON_SENSORS
+    )
 
     if coordinator.device_data.get("fw_major") == 8:
-        entities += [
+        async_add_entities(
             AirOSSensor(coordinator, description) for description in AIROS8_SENSORS
-        ]
-
-    async_add_entities(entities)
+        )
 
 
 class AirOSSensor(AirOSEntity, SensorEntity):

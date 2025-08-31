@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Generic, TypeVar
+
+from airos.data import AirOS8Data, AirOSDataBaseClass
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -14,18 +17,24 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .coordinator import AirOSConfigEntry, AirOSDataDetect, AirOSDataUpdateCoordinator
+from .coordinator import AirOSConfigEntry, AirOSDataUpdateCoordinator
 from .entity import AirOSEntity
 
 PARALLEL_UPDATES = 0
 
+AirOSDataModel = TypeVar("AirOSDataModel", bound=AirOSDataBaseClass)
+
 
 @dataclass(frozen=True, kw_only=True)
-class AirOSBinarySensorEntityDescription(BinarySensorEntityDescription):
+class AirOSBinarySensorEntityDescription(
+    BinarySensorEntityDescription, Generic[AirOSDataModel]
+):
     """Describe an AirOS binary sensor."""
 
-    value_fn: Callable[[AirOSDataDetect], bool]
+    value_fn: Callable[[AirOSDataModel], bool]
 
+
+AirOS8BinarySensorEntityDescription = AirOSBinarySensorEntityDescription[AirOS8Data]
 
 COMMON_BINARY_SENSORS: tuple[AirOSBinarySensorEntityDescription, ...] = (
     AirOSBinarySensorEntityDescription(
@@ -53,19 +62,19 @@ COMMON_BINARY_SENSORS: tuple[AirOSBinarySensorEntityDescription, ...] = (
     ),
 )
 
-AIROS8_BINARY_SENSORS: tuple[AirOSBinarySensorEntityDescription, ...] = (
-    AirOSBinarySensorEntityDescription(
+AIROS8_BINARY_SENSORS: tuple[AirOS8BinarySensorEntityDescription, ...] = (
+    AirOS8BinarySensorEntityDescription(
         key="portfw",
         translation_key="port_forwarding",
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data.portfw,  # type: ignore[union-attr]
+        value_fn=lambda data: data.portfw,
     ),
-    AirOSBinarySensorEntityDescription(
+    AirOS8BinarySensorEntityDescription(
         key="dhcp6_server",
         translation_key="dhcp6_server",
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data.services.dhcp6d_stateful,  # type: ignore[union-attr]
+        value_fn=lambda data: data.services.dhcp6d_stateful,
         entity_registry_enabled_default=False,
     ),
 )
@@ -79,17 +88,16 @@ async def async_setup_entry(
     """Set up the AirOS binary sensors from a config entry."""
     coordinator = config_entry.runtime_data
 
-    entities = [
+    async_add_entities(
         AirOSBinarySensor(coordinator, description)
         for description in COMMON_BINARY_SENSORS
-    ]
+    )
+
     if coordinator.device_data.get("fw_major") == 8:
-        entities += [
+        async_add_entities(
             AirOSBinarySensor(coordinator, description)
             for description in AIROS8_BINARY_SENSORS
-        ]
-
-    async_add_entities(entities)
+        )
 
 
 class AirOSBinarySensor(AirOSEntity, BinarySensorEntity):
