@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
-from airos.data import AirOS8Data, AirOSDataBaseClass
+from airos.data import AirOSDataBaseClass
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -17,7 +17,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .coordinator import AirOSConfigEntry, AirOSDataUpdateCoordinator
+from .coordinator import AirOS8Data, AirOSConfigEntry, AirOSDataUpdateCoordinator
 from .entity import AirOSEntity
 
 PARALLEL_UPDATES = 0
@@ -115,8 +115,8 @@ class AirOSBinarySensor(AirOSEntity, BinarySensorEntity):
 
         self.entity_description = description
         _prefix = coordinator.data.derived.mac
-        if coordinator.device_data.get("fw_major") == 8:
-            _prefix = coordinator.data.host.device_id  # type: ignore[union-attr]
+        if isinstance(coordinator.data, AirOS8Data):
+            _prefix = coordinator.data.host.device_id
         self._attr_unique_id = f"{_prefix}_{description.key}"
 
     @property

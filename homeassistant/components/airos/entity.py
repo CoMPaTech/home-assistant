@@ -7,7 +7,7 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, Device
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
-from .coordinator import AirOSDataUpdateCoordinator
+from .coordinator import AirOS8Data, AirOSDataUpdateCoordinator
 
 
 class AirOSEntity(CoordinatorEntity[AirOSDataUpdateCoordinator]):
@@ -22,8 +22,8 @@ class AirOSEntity(CoordinatorEntity[AirOSDataUpdateCoordinator]):
         airos_data = self.coordinator.data
 
         _identifier = coordinator.data.derived.mac
-        if coordinator.device_data.get("fw_major") == 8:
-            _identifier = coordinator.data.host.device_id  # type: ignore[union-attr]
+        if isinstance(coordinator.data, AirOS8Data):
+            _identifier = coordinator.data.host.device_id
 
         configuration_url: str | None = (
             f"https://{coordinator.config_entry.data[CONF_HOST]}"
