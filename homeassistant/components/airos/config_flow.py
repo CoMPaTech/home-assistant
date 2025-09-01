@@ -36,6 +36,7 @@ class AirOSConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Ubiquiti airOS."""
 
     VERSION = 1
+    MINOR_VERSION = 3
 
     async def async_step_user(
         self,
