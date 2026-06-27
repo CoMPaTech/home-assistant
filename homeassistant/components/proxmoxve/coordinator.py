@@ -6,8 +6,8 @@ from datetime import timedelta
 import logging
 from typing import Any, override
 
-from proxmoxer import AuthenticationError, ProxmoxAPI
-from proxmoxer.core import ResourceException
+from proxmox_sdk.sdk.api import ProxmoxSDK
+from proxmox_sdk.sdk.exceptions import AuthenticationError, ResourceException
 import requests
 from requests.exceptions import ConnectTimeout, SSLError
 
@@ -81,7 +81,7 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
             name=DOMAIN,
             update_interval=DEFAULT_UPDATE_INTERVAL,
         )
-        self.proxmox: ProxmoxAPI
+        self.proxmox: ProxmoxSDK
 
         self.known_nodes: set[str] = set()
         self.known_vms: set[tuple[str, int]] = set()
@@ -104,7 +104,7 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
     async def _async_setup(self) -> None:
         """Set up the coordinator."""
         try:
-            await self.hass.async_add_executor_job(self._init_proxmox)
+            await self._init_proxmox()
         except AuthenticationError as err:
             raise ConfigEntryAuthFailed(
                 translation_domain=DOMAIN,
@@ -151,7 +151,7 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
         """Fetch data from Proxmox VE API."""
 
         try:
-            node_pairs = await self.hass.async_add_executor_job(self._fetch_all_nodes)
+            node_pairs = await self._fetch_all_nodes()
         except AuthenticationError as err:
             raise ConfigEntryAuthFailed(
                 translation_domain=DOMAIN,
@@ -198,24 +198,24 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
         self._async_add_remove_nodes(data)
         return data
 
-    def _init_proxmox(self) -> None:
-        """Initialize ProxmoxAPI instance."""
+    async def _init_proxmox(self) -> None:
+        """Initialize ProxmoxSDK instance."""
         data = sanitize_config_entry(self.config_entry.data)
-        auth_kwargs = {
-            "password": data.get(CONF_PASSWORD),
-        }
-        if data.get(CONF_TOKEN):
-            auth_kwargs = {
+        auth_kwargs = (
+            {
                 "token_name": data[CONF_TOKEN_ID],
                 "token_value": data[CONF_TOKEN_SECRET],
             }
+            if data.get(CONF_TOKEN)
+            else {"password": data.get(CONF_PASSWORD)}
+        )
         _LOGGER.debug(
             "Connecting as %s to %s using %s",
             data[CONF_USERNAME],
             data[CONF_HOST],
             auth_kwargs.keys(),
         )
-        self.proxmox = ProxmoxAPI(
+        self.proxmox = ProxmoxSDK(
             host=data[CONF_HOST],
             port=data[CONF_PORT],
             user=data[CONF_USERNAME],
@@ -225,25 +225,25 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
         )
 
         try:
-            self.permissions = self.proxmox.access.permissions.get() or {}
+            self.permissions = await self.proxmox.access.permissions.get() or {}
         except ResourceException as err:
             if 400 <= err.status_code < 500:
                 raise ProxmoxPermissionsError from err
             raise ProxmoxServerError from err
 
         try:
-            self.proxmox.nodes.get()
+            await self.proxmox.nodes.get()
         except ResourceException as err:
             if 400 <= err.status_code < 500:
                 raise ProxmoxNodesNotFoundError from err
             raise ProxmoxServerError from err
 
-    def _fetch_all_nodes(self) -> list[tuple[dict[str, Any], NodeResources]]:
+    async def _fetch_all_nodes(self) -> list[tuple[dict[str, Any], NodeResources]]:
         """Fetch all nodes with their VMs, containers, storages, and backups."""
-        nodes = self.proxmox.nodes.get() or []
-        return [(node, self._get_node_data(node)) for node in nodes]
+        nodes = await self.proxmox.nodes.get() or []
+        return [(node, await self._get_node_data(node)) for node in nodes]
 
-    def _get_node_data(
+    async def _get_node_data(
         self,
         node: dict[str, Any],
     ) -> NodeResources:
@@ -255,11 +255,13 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
             )
             return NodeResources(vms=[], containers=[], storages=[], backups=[])
 
-        vms = self.proxmox.nodes(node[CONF_NODE]).qemu.get() or []
-        containers = self.proxmox.nodes(node[CONF_NODE]).lxc.get() or []
-        storages = self.proxmox.nodes(node[CONF_NODE]).storage.get() or []
+        vms = await self.proxmox.nodes(node[CONF_NODE]).qemu.get() or []
+        containers = await self.proxmox.nodes(node[CONF_NODE]).lxc.get() or []
+        storages = await self.proxmox.nodes(node[CONF_NODE]).storage.get() or []
         backups = (
-            self.proxmox.nodes(node[CONF_NODE]).tasks.get(typefilter="vzdump", limit=1)
+            await self.proxmox.nodes(node[CONF_NODE]).tasks.get(
+                typefilter="vzdump", limit=1
+            )
             or []
         )
 

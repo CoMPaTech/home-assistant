@@ -4,8 +4,8 @@ from collections.abc import Mapping
 import logging
 from typing import Any, override
 
-from proxmoxer import AuthenticationError, ProxmoxAPI
-from proxmoxer.core import ResourceException
+from proxmox_sdk.sdk.api import ProxmoxSDK
+from proxmox_sdk.sdk.exceptions import AuthenticationError, ResourceException
 import requests
 from requests.exceptions import ConnectTimeout, SSLError
 import voluptuous as vol
@@ -78,7 +78,7 @@ TOKEN_SCHEMA = vol.Schema(
 )
 
 
-def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
+async def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
     """Validate the user input and fetch data (sync, for executor)."""
     auth_kwargs = (
         {
@@ -90,7 +90,7 @@ def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
     )
     data = sanitize_config_entry(data)
     try:
-        client = ProxmoxAPI(
+        client = ProxmoxSDK(
             host=data[CONF_HOST],
             port=data[CONF_PORT],
             user=data[CONF_USERNAME],
@@ -111,7 +111,7 @@ def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
         raise ProxmoxConnectionError from err
 
     try:
-        nodes = client.nodes.get()
+        nodes = await client.nodes.get()
     except AuthenticationError as err:
         raise ProxmoxAuthenticationError from err
     except SSLError as err:
@@ -138,8 +138,8 @@ def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
             )
             continue
         try:
-            vms = client.nodes(node["node"]).qemu.get()
-            containers = client.nodes(node["node"]).lxc.get()
+            vms = await client.nodes(node["node"]).qemu.get()
+            containers = await client.nodes(node["node"]).lxc.get()
         except ResourceException as err:
             _LOGGER.debug(
                 "Error fetching VMs/LXC for node %s", node["node"], exc_info=True
@@ -316,9 +316,7 @@ class ProxmoxveConfigFlow(ConfigFlow, domain=DOMAIN):
         proxmox_nodes: list[dict[str, Any]] = []
         err: ProxmoxError | None = None
         try:
-            proxmox_nodes = await self.hass.async_add_executor_job(
-                _get_nodes_data, user_input
-            )
+            proxmox_nodes = await _get_nodes_data(user_input)
         except ProxmoxConnectTimeout as exc:
             errors["base"] = "connect_timeout"
             err = exc
@@ -351,9 +349,7 @@ class ProxmoxveConfigFlow(ConfigFlow, domain=DOMAIN):
         self._async_abort_entries_match({CONF_HOST: import_data[CONF_HOST]})
 
         try:
-            proxmox_nodes = await self.hass.async_add_executor_job(
-                _get_nodes_data, import_data
-            )
+            proxmox_nodes = await _get_nodes_data(import_data)
         except ProxmoxConnectTimeout:
             return self.async_abort(reason="connect_timeout")
         except ProxmoxAuthenticationError:

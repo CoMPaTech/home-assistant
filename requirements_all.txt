@@ -1883,7 +1883,7 @@ prometheus-client==0.21.0
 prowlpy==1.1.5
 
 # homeassistant.components.proxmoxve
-proxmoxer==2.3.0
+proxmox-sdk==0.0.12
 
 # homeassistant.components.hardware
 # homeassistant.components.recorder
