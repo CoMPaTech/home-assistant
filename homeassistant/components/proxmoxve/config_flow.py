@@ -19,8 +19,10 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_VERIFY_SSL,
 )
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
@@ -78,7 +80,9 @@ TOKEN_SCHEMA = vol.Schema(
 )
 
 
-async def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
+async def _get_nodes_data(
+    hass: HomeAssistant, data: dict[str, Any]
+) -> list[dict[str, Any]]:
     """Validate the user input and fetch data (sync, for executor)."""
     auth_kwargs = (
         {
@@ -89,6 +93,10 @@ async def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
         else {"password": data.get(CONF_PASSWORD)}
     )
     data = sanitize_config_entry(data)
+    session = async_get_clientsession(
+        hass, verify_ssl=data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL)
+    )
+
     try:
         client = ProxmoxSDK(
             host=data[CONF_HOST],
@@ -96,6 +104,7 @@ async def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
             user=data[CONF_USERNAME],
             verify_ssl=data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL),
             timeout=DEFAULT_TIMEOUT,
+            session=session,
             **auth_kwargs,
         )
     except AuthenticationError as err:
@@ -316,7 +325,7 @@ class ProxmoxveConfigFlow(ConfigFlow, domain=DOMAIN):
         proxmox_nodes: list[dict[str, Any]] = []
         err: ProxmoxError | None = None
         try:
-            proxmox_nodes = await _get_nodes_data(user_input)
+            proxmox_nodes = await _get_nodes_data(self.hass, user_input)
         except ProxmoxConnectTimeout as exc:
             errors["base"] = "connect_timeout"
             err = exc
@@ -349,7 +358,7 @@ class ProxmoxveConfigFlow(ConfigFlow, domain=DOMAIN):
         self._async_abort_entries_match({CONF_HOST: import_data[CONF_HOST]})
 
         try:
-            proxmox_nodes = await _get_nodes_data(import_data)
+            proxmox_nodes = await _get_nodes_data(self.hass, import_data)
         except ProxmoxConnectTimeout:
             return self.async_abort(reason="connect_timeout")
         except ProxmoxAuthenticationError:
