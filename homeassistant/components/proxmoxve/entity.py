@@ -34,8 +34,8 @@ class ProxmoxNodeEntity(ProxmoxCoordinatorEntity):
         """Initialize the Proxmox node entity."""
         super().__init__(coordinator)
         self._node_data = node_data
-        self.device_id = node_data.node["id"]
-        self.device_name = node_data.node["node"]
+        self.device_id = node_data.node.id
+        self.device_name = node_data.node.node
         self.entity_description = entity_description
         self._attr_device_info = node_device_info(coordinator, node_data)
 
@@ -66,7 +66,7 @@ class ProxmoxStorageEntity(ProxmoxCoordinatorEntity):
         super().__init__(coordinator)
         self.entity_description = entity_description
         self._storage_data = storage_data
-        self._node_name = node_data.node["node"]
+        self._node_name = node_data.node.node
         self.device_id = storage_data["storage"]
         self.device_name = storage_data["storage"]
 
@@ -128,9 +128,9 @@ class ProxmoxVMEntity(ProxmoxCoordinatorEntity):
         super().__init__(coordinator)
         self.entity_description = entity_description
         self._vm_data = vm_data
-        self._node_name = node_data.node["node"]
-        self.device_id = vm_data["vmid"]
-        self.device_name = vm_data["name"]
+        self._node_name = node_data.node.node
+        self.device_id = vm_data.vmid
+        self.device_name = vm_data.vmid
 
         self._attr_device_info = DeviceInfo(
             identifiers={
@@ -186,9 +186,9 @@ class ProxmoxContainerEntity(ProxmoxCoordinatorEntity):
         super().__init__(coordinator)
         self.entity_description = entity_description
         self._container_data = container_data
-        self._node_name = node_data.node["node"]
-        self.device_id = container_data["vmid"]
-        self.device_name = container_data["name"]
+        self._node_name = node_data.node.node
+        self.device_id = container_data.vmid
+        self.device_name = container_data.name
 
         self._attr_device_info = DeviceInfo(
             identifiers={

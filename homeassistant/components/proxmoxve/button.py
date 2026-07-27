@@ -5,8 +5,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, override
 
-from proxmoxer import AuthenticationError
-from proxmoxer.core import ResourceException
+from aioproxmox import AuthenticationError
+from aioproxmox.core import ResourceException
 import requests
 from requests.exceptions import ConnectTimeout, SSLError
 
@@ -24,7 +24,6 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN, ProxmoxPermission
 from .coordinator import ProxmoxConfigEntry, ProxmoxCoordinator, ProxmoxNodeData
 from .entity import ProxmoxContainerEntity, ProxmoxNodeEntity, ProxmoxVMEntity
-from .helpers import is_granted
 
 PARALLEL_UPDATES = 1
 
@@ -110,7 +109,7 @@ VM_BUTTONS: tuple[ProxmoxVMButtonEntityDescription, ...] = (
         key="start",
         translation_key="start",
         press_action=lambda coordinator, node, vmid: (
-            coordinator.proxmox.nodes(node).qemu(vmid).status.start.post()
+            coordinator.proxmox.nodes(node).qemu(vmid).status.start()
         ),
         entity_category=EntityCategory.CONFIG,
     ),
@@ -118,14 +117,14 @@ VM_BUTTONS: tuple[ProxmoxVMButtonEntityDescription, ...] = (
         key="stop",
         translation_key="stop",
         press_action=lambda coordinator, node, vmid: (
-            coordinator.proxmox.nodes(node).qemu(vmid).status.stop.post()
+            coordinator.proxmox.nodes(node).qemu(vmid).status.stop()
         ),
         entity_category=EntityCategory.CONFIG,
     ),
     ProxmoxVMButtonEntityDescription(
         key="restart",
         press_action=lambda coordinator, node, vmid: (
-            coordinator.proxmox.nodes(node).qemu(vmid).status.reboot.post()
+            coordinator.proxmox.nodes(node).qemu(vmid).status.reboot()
         ),
         entity_category=EntityCategory.CONFIG,
         device_class=ButtonDeviceClass.RESTART,
@@ -142,7 +141,7 @@ VM_BUTTONS: tuple[ProxmoxVMButtonEntityDescription, ...] = (
         key="resume",
         translation_key="resume",
         press_action=lambda coordinator, node, vmid: (
-            coordinator.proxmox.nodes(node).qemu(vmid).status.resume.post()
+            coordinator.proxmox.nodes(node).qemu(vmid).status.resume()
         ),
         entity_category=EntityCategory.CONFIG,
     ),
@@ -150,7 +149,7 @@ VM_BUTTONS: tuple[ProxmoxVMButtonEntityDescription, ...] = (
         key="reset",
         translation_key="reset",
         press_action=lambda coordinator, node, vmid: (
-            coordinator.proxmox.nodes(node).qemu(vmid).status.reset.post()
+            coordinator.proxmox.nodes(node).qemu(vmid).status.reset()
         ),
         entity_category=EntityCategory.CONFIG,
     ),
@@ -158,7 +157,7 @@ VM_BUTTONS: tuple[ProxmoxVMButtonEntityDescription, ...] = (
         key="shutdown",
         translation_key="shutdown",
         press_action=lambda coordinator, node, vmid: (
-            coordinator.proxmox.nodes(node).qemu(vmid).status.shutdown.post()
+            coordinator.proxmox.nodes(node).qemu(vmid).status.shutdown()
         ),
         entity_category=EntityCategory.CONFIG,
     ),
@@ -186,7 +185,7 @@ CONTAINER_BUTTONS: tuple[ProxmoxContainerButtonEntityDescription, ...] = (
         key="start",
         translation_key="start",
         press_action=lambda coordinator, node, vmid: (
-            coordinator.proxmox.nodes(node).lxc(vmid).status.start.post()
+            coordinator.proxmox.nodes(node).lxc(vmid).status.start()
         ),
         entity_category=EntityCategory.CONFIG,
     ),
@@ -194,14 +193,14 @@ CONTAINER_BUTTONS: tuple[ProxmoxContainerButtonEntityDescription, ...] = (
         key="stop",
         translation_key="stop",
         press_action=lambda coordinator, node, vmid: (
-            coordinator.proxmox.nodes(node).lxc(vmid).status.stop.post()
+            coordinator.proxmox.nodes(node).lxc(vmid).status.stop()
         ),
         entity_category=EntityCategory.CONFIG,
     ),
     ProxmoxContainerButtonEntityDescription(
         key="restart",
         press_action=lambda coordinator, node, vmid: (
-            coordinator.proxmox.nodes(node).lxc(vmid).status.reboot.post()
+            coordinator.proxmox.nodes(node).lxc(vmid).status.reboot()
         ),
         entity_category=EntityCategory.CONFIG,
         device_class=ButtonDeviceClass.RESTART,
@@ -240,11 +239,9 @@ async def async_setup_entry(
             ProxmoxNodeButtonEntity(coordinator, entity_description, node)
             for node in nodes
             for entity_description in NODE_BUTTONS
-            if is_granted(
-                coordinator.permissions,
-                p_type=entity_description.permission_target,
-                p_id=node.node["node"],
-                permission=entity_description.permission,
+            if coordinator.permissions.has_node_permission(
+                node.node.node,
+                entity_description.permission,
             )
         )
 
@@ -256,11 +253,8 @@ async def async_setup_entry(
             ProxmoxVMButtonEntity(coordinator, entity_description, vm, node_data)
             for (node_data, vm) in vms
             for entity_description in VM_BUTTONS
-            if is_granted(
-                coordinator.permissions,
-                p_type=entity_description.permission_target,
-                p_id=vm["vmid"],
-                permission=entity_description.permission,
+            if coordinator.permissions.has_vm_permission(
+                vm.vmid, entity_description.permission
             )
         )
 
@@ -274,11 +268,8 @@ async def async_setup_entry(
             )
             for (node_data, container) in containers
             for entity_description in CONTAINER_BUTTONS
-            if is_granted(
-                coordinator.permissions,
-                p_type=entity_description.permission_target,
-                p_id=container["vmid"],
-                permission=entity_description.permission,
+            if coordinator.permissions.has_vm_permission(
+                vm.vmid, entity_description.permission
             )
         )
 
@@ -290,7 +281,7 @@ async def async_setup_entry(
         [
             node_data
             for node_data in coordinator.data.values()
-            if node_data.node["node"] in coordinator.known_nodes
+            if node_data.node.node in coordinator.known_nodes
         ]
     )
     _async_add_new_vms(
@@ -298,7 +289,7 @@ async def async_setup_entry(
             (node_data, vm_data)
             for node_data in coordinator.data.values()
             for vmid, vm_data in node_data.vms.items()
-            if (node_data.node["node"], vmid) in coordinator.known_vms
+            if (node_data.node.node, vmid) in coordinator.known_vms
         ]
     )
     _async_add_new_containers(
@@ -306,7 +297,7 @@ async def async_setup_entry(
             (node_data, container_data)
             for node_data in coordinator.data.values()
             for vmid, container_data in node_data.containers.items()
-            if (node_data.node["node"], vmid) in coordinator.known_containers
+            if (node_data.node.node, vmid) in coordinator.known_containers
         ]
     )
 
@@ -362,7 +353,7 @@ class ProxmoxNodeButtonEntity(ProxmoxNodeEntity, ProxmoxBaseButton):
         await self.hass.async_add_executor_job(
             self.entity_description.press_action,
             self.coordinator,
-            self._node_data.node["node"],
+            self._node_data.node.node,
         )
 
 

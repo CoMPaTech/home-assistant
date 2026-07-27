@@ -26,7 +26,6 @@ from .entity import (
     ProxmoxStorageEntity,
     ProxmoxVMEntity,
 )
-from .helpers import is_granted
 
 PARALLEL_UPDATES = 0
 
@@ -480,12 +479,10 @@ async def async_setup_entry(
             ProxmoxNodeSensor(coordinator, entity_description, node)
             for node in nodes
             for entity_description in NODE_SENSORS
-            if is_granted(
-                coordinator.permissions,
-                p_type=entity_description.permission_target,
-                p_id=node.node["node"],
-                permission=entity_description.permission,
-            )
+            if coordinator.permissions.has_node_permission(
+                    node.node.node,
+                    entity_description.permission,
+                )
         )
 
     def _async_add_new_vms(
@@ -529,7 +526,7 @@ async def async_setup_entry(
         [
             node_data
             for node_data in coordinator.data.values()
-            if node_data.node["node"] in coordinator.known_nodes
+            if node_data.node.node in coordinator.known_nodes
         ]
     )
     _async_add_new_vms(
@@ -537,7 +534,7 @@ async def async_setup_entry(
             (node_data, vm_data)
             for node_data in coordinator.data.values()
             for vmid, vm_data in node_data.vms.items()
-            if (node_data.node["node"], vmid) in coordinator.known_vms
+            if (node_data.node.node, vmid) in coordinator.known_vms
         ]
     )
     _async_add_new_containers(
@@ -545,7 +542,7 @@ async def async_setup_entry(
             (node_data, container_data)
             for node_data in coordinator.data.values()
             for vmid, container_data in node_data.containers.items()
-            if (node_data.node["node"], vmid) in coordinator.known_containers
+            if (node_data.node.node, vmid) in coordinator.known_containers
         ]
     )
     _async_add_new_storages(
@@ -553,7 +550,7 @@ async def async_setup_entry(
             (node_data, storage_data)
             for node_data in coordinator.data.values()
             for storage_name, storage_data in node_data.storages.items()
-            if (node_data.node["node"], storage_name) in coordinator.known_storages
+            if (node_data.node.node, storage_name) in coordinator.known_storages
         ]
     )
 
