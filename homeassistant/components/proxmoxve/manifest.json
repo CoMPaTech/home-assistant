@@ -8,5 +8,5 @@
   "iot_class": "local_polling",
   "loggers": ["phais"],
   "quality_scale": "legacy",
-  "requirements": ["phais==0.0.2a4"]
+  "requirements": ["phais==0.0.2a5"]
 }

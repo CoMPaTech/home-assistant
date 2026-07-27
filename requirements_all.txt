@@ -1859,6 +1859,9 @@ pescea==1.0.12
 # homeassistant.components.cisco_ios
 pexpect==4.9.0
 
+# homeassistant.components.proxmoxve
+phais==0.0.2a5
+
 # homeassistant.components.modem_callerid
 phone-modem==0.1.1
 
@@ -1901,9 +1904,6 @@ prometheus-client==0.21.0
 
 # homeassistant.components.prowl
 prowlpy==1.1.5
-
-# homeassistant.components.proxmoxve
-proxmoxer==2.3.0
 
 # homeassistant.components.hardware
 # homeassistant.components.recorder
