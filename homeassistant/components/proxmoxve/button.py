@@ -271,7 +271,6 @@ async def async_setup_entry(
             if coordinator.permissions.has_vm_permission(
                 vm.vmid, entity_description.permission
             )
-        )
 
     coordinator.new_nodes_callbacks.append(_async_add_new_nodes)
     coordinator.new_vms_callbacks.append(_async_add_new_vms)

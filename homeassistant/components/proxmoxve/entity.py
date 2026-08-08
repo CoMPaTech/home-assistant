@@ -130,7 +130,7 @@ class ProxmoxVMEntity(ProxmoxCoordinatorEntity):
         self._vm_data = vm_data
         self._node_name = node_data.node.node
         self.device_id = vm_data.vmid
-        self.device_name = vm_data.vmid
+        self.device_name = vm_data.name
 
         self._attr_device_info = DeviceInfo(
             identifiers={

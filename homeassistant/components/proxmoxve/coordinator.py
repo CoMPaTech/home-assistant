@@ -7,9 +7,9 @@ import logging
 from typing import Any, override
 import asyncio
 
-from phais import ProxmoxVE
-from phais.model.pve import NodeResource, OperationalStatus
-from phais.exceptions import ProxmoxAuthError, ResourceNotFoundError
+from aioproxmox import ProxmoxVE
+from aioproxmox.model.pve import NodeResource, OperationalStatus
+from aioproxmox.exceptions import ProxmoxAuthError, ResourceNotFoundError
 import requests
 from requests.exceptions import ConnectTimeout, SSLError
 from yarl import URL
