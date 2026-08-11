@@ -4,8 +4,8 @@ from collections.abc import Mapping
 import logging
 from typing import Any, override
 
-from proxmoxer import AuthenticationError, ProxmoxAPI
-from proxmoxer.core import ResourceException
+from aioproxmox import ProxmoxVE, ProxmoxAuthError, ProxmoxAPIError
+from aioproxmox.exceptions import ResourceNotFoundError
 import requests
 from requests.exceptions import ConnectTimeout, SSLError
 import voluptuous as vol
@@ -88,7 +88,7 @@ TOKEN_SCHEMA = vol.Schema(
 )
 
 
-def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
+async def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
     """Validate the user input and fetch data (sync, for executor)."""
     auth_kwargs = (
         {
@@ -100,7 +100,7 @@ def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
     )
     data = sanitize_config_entry(data)
     try:
-        client = ProxmoxAPI(
+        cluster = ProxmoxVE(
             host=data[CONF_HOST],
             port=data[CONF_PORT],
             user=data[CONF_USERNAME],
@@ -108,27 +108,28 @@ def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
             timeout=DEFAULT_TIMEOUT,
             **auth_kwargs,
         )
-    except AuthenticationError as err:
+        await cluster.connect()
+    except ProxmoxAuthError as err:
         raise ProxmoxAuthenticationError from err
     except SSLError as err:
         raise ProxmoxSSLError from err
     except ConnectTimeout as err:
         raise ProxmoxConnectTimeout from err
-    except ResourceException as err:
+    except ResourceNotFoundError as err:
         _LOGGER.debug("Error during Proxmox client initialisation", exc_info=True)
         raise ProxmoxInitFailed from err
     except requests.exceptions.ConnectionError as err:
         raise ProxmoxConnectionError from err
 
     try:
-        nodes = client.nodes.get()
-    except AuthenticationError as err:
+        nodes = cluster.cluster_cache.nodes.values()
+    except ProxmoxAuthError as err:
         raise ProxmoxAuthenticationError from err
     except SSLError as err:
         raise ProxmoxSSLError from err
     except ConnectTimeout as err:
         raise ProxmoxConnectTimeout from err
-    except ResourceException as err:
+    except ResourceNotFoundError as err:
         _LOGGER.debug("Error fetching nodes", exc_info=True)
         raise ProxmoxNoNodesFound from err
     except requests.exceptions.ConnectionError as err:
@@ -139,8 +140,10 @@ def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
             translation_domain=DOMAIN, translation_key="no_nodes_found"
         )
 
+    # TODO: rework just from cluster_cache, there is no need to query qemu or lxc
     nodes_data: list[dict[str, Any]] = []
     for node in nodes:
+        node_name = node.node
         if node.get("status") != NODE_ONLINE:
             _LOGGER.debug(
                 "Node %s is offline, skipping VM/container fetch",
@@ -148,11 +151,11 @@ def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
             )
             continue
         try:
-            vms = client.nodes(node["node"]).qemu.get()
-            containers = client.nodes(node["node"]).lxc.get()
-        except ResourceException as err:
+            vms = await cluster.nodes(node_name).qemu_all()
+            containers = await cluster.nodes(node_name).lxc_all()
+        except ResourceNotFoundError as err:
             _LOGGER.debug(
-                "Error fetching VMs/LXC for node %s", node["node"], exc_info=True
+                "Error fetching VMs/LXC for node %s", node_name, exc_info=True
             )
             raise ProxmoxNoVMLXCFound from err
         except requests.exceptions.ConnectionError as err:
@@ -160,7 +163,7 @@ def _get_nodes_data(data: dict[str, Any]) -> list[dict[str, Any]]:
 
         nodes_data.append(
             {
-                CONF_NODE: node["node"],
+                CONF_NODE: node_name,
                 CONF_VMS: [vm["vmid"] for vm in vms],
                 CONF_CONTAINERS: [container["vmid"] for container in containers],
             }
@@ -326,9 +329,7 @@ class ProxmoxveConfigFlow(ConfigFlow, domain=DOMAIN):
         proxmox_nodes: list[dict[str, Any]] = []
         err: ProxmoxError | None = None
         try:
-            proxmox_nodes = await self.hass.async_add_executor_job(
-                _get_nodes_data, user_input
-            )
+            proxmox_nodes = await _get_nodes_data(user_input)
         except ProxmoxConnectTimeout as exc:
             errors["base"] = "connect_timeout"
             err = exc

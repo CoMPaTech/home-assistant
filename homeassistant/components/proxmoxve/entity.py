@@ -86,7 +86,7 @@ class ProxmoxStorageEntity(ProxmoxCoordinatorEntity):
                 coordinator.hass,
                 (
                     DOMAIN,
-                    f"{coordinator.config_entry.entry_id}_node_{node_data.node['id']}",
+                    f"{coordinator.config_entry.entry_id}_node_{node_data.node.id}",
                 ),
                 config_entry_id=coordinator.config_entry.entry_id,
             ),
@@ -139,13 +139,13 @@ class ProxmoxVMEntity(ProxmoxCoordinatorEntity):
             name=self.device_name,
             model="VM",
             configuration_url=proxmox_base_url(coordinator).with_fragment(
-                f"v1:0:=qemu/{vm_data['vmid']}"
+                f"v1:0:=qemu/{vm_data.vmid}"
             ),
             via_device_id=dr.async_get_device_id_by_identifier(
                 coordinator.hass,
                 (
                     DOMAIN,
-                    f"{coordinator.config_entry.entry_id}_node_{node_data.node['id']}",
+                    f"{coordinator.config_entry.entry_id}_node_{node_data.node.id}",
                 ),
                 config_entry_id=coordinator.config_entry.entry_id,
             ),
@@ -200,13 +200,13 @@ class ProxmoxContainerEntity(ProxmoxCoordinatorEntity):
             name=self.device_name,
             model="Container",
             configuration_url=proxmox_base_url(coordinator).with_fragment(
-                f"v1:0:=lxc/{container_data['vmid']}"
+                f"v1:0:=lxc/{container_data.vmid}"
             ),
             via_device_id=dr.async_get_device_id_by_identifier(
                 coordinator.hass,
                 (
                     DOMAIN,
-                    f"{coordinator.config_entry.entry_id}_node_{node_data.node['id']}",
+                    f"{coordinator.config_entry.entry_id}_node_{node_data.node.id}",
                 ),
                 config_entry_id=coordinator.config_entry.entry_id,
             ),

@@ -5,10 +5,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, override
 
-from aioproxmox import AuthenticationError
-from aioproxmox.core import ResourceException
-import requests
-from requests.exceptions import ConnectTimeout, SSLError
+from aioproxmox.exceptions import (
+    ProxmoxAuthError,
+    ProxmoxAPIError,
+    ResourceNotFoundError,
+)
 
 from homeassistant.components.button import (
     ButtonDeviceClass,
@@ -269,8 +270,9 @@ async def async_setup_entry(
             for (node_data, container) in containers
             for entity_description in CONTAINER_BUTTONS
             if coordinator.permissions.has_vm_permission(
-                vm.vmid, entity_description.permission
+                container.vmid, entity_description.permission
             )
+        )
 
     coordinator.new_nodes_callbacks.append(_async_add_new_nodes)
     coordinator.new_vms_callbacks.append(_async_add_new_vms)
@@ -319,22 +321,22 @@ class ProxmoxBaseButton(ButtonEntity):
         """Trigger the Proxmox button press service."""
         try:
             await self._async_press_call()
-        except AuthenticationError as err:
+        except ProxmoxAPIError as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="cannot_connect",
             ) from err
-        except SSLError as err:
+        except ProxmoxAuthError as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="invalid_auth",
             ) from err
-        except ConnectTimeout as err:
+        except TimeoutError as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="timeout_connect",
             ) from err
-        except (ResourceException, requests.exceptions.ConnectionError) as err:
+        except ResourceNotFoundError as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="api_error_details",

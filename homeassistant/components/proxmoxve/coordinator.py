@@ -84,12 +84,12 @@ def node_device_info(
     """Return the device info for a Proxmox VE node device."""
     return dr.DeviceInfo(
         identifiers={
-            (DOMAIN, f"{coordinator.config_entry.entry_id}_node_{node_data.node['id']}")
+            (DOMAIN, f"{coordinator.config_entry.entry_id}_node_{node_data.node.id}")
         },
-        name=node_data.node.get("node", str(node_data.node["id"])),
+        name=node_data.node.node or node_data.node.id,
         model="Node",
         configuration_url=proxmox_base_url(coordinator).with_fragment(
-            f"v1:0:=node/{node_data.node['node']}"
+            f"v1:0:=node/{node_data.node.node}"
         ),
     )
 
@@ -212,8 +212,7 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
                 node=node,
                 vms={vm.vmid: vm for vm in resources.vms},
                 containers={
-                    container.vmid: container
-                    for container in resources.containers
+                    container.vmid: container for container in resources.containers
                 },
                 storages={s["storage"]: s for s in resources.storages},
                 backups=resources.backups,
@@ -253,7 +252,7 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
         )
 
         try:
-            cluster = await self.proxmox.connect()
+            await self.proxmox.connect()
             self.permissions = await self.proxmox.access.permissions() or {}
         except ResourceNotFoundError as err:
             if 400 <= err.status_code < 500:
