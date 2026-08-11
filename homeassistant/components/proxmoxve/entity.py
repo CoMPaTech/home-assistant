@@ -41,7 +41,7 @@ class ProxmoxNodeEntity(ProxmoxCoordinatorEntity):
 
         self._attr_unique_id = (
             f"{coordinator.config_entry.entry_id}"
-            f"_{node_data.node['id']}"
+            f"_{node_data.node.id}"
             f"_{entity_description.key}"
         )
 
@@ -67,8 +67,8 @@ class ProxmoxStorageEntity(ProxmoxCoordinatorEntity):
         self.entity_description = entity_description
         self._storage_data = storage_data
         self._node_name = node_data.node.node
-        self.device_id = storage_data["storage"]
-        self.device_name = storage_data["storage"]
+        self.device_id = storage_data.storage
+        self.device_name = storage_data.storage
 
         self._attr_device_info = DeviceInfo(
             identifiers={
@@ -80,7 +80,7 @@ class ProxmoxStorageEntity(ProxmoxCoordinatorEntity):
             name=f"Storage ({self.device_name})",
             model="Storage",
             configuration_url=proxmox_base_url(coordinator).with_fragment(
-                f"v1:0:=storage/{self._node_name}/{storage_data['storage']}"
+                f"v1:0:=storage/{self._node_name}/{storage_data.storage}"
             ),
             via_device_id=dr.async_get_device_id_by_identifier(
                 coordinator.hass,

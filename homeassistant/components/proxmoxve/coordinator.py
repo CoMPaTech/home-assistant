@@ -8,7 +8,7 @@ from typing import Any, override
 import asyncio
 
 from aioproxmox import ProxmoxVE
-from aioproxmox.model.pve import NodeResource, OperationalStatus
+from aioproxmox.model.pve import ClusterNodeResource, OperationalStatus
 from aioproxmox.exceptions import ProxmoxAuthError, ResourceNotFoundError
 import requests
 from requests.exceptions import ConnectTimeout, SSLError
@@ -31,13 +31,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .common import sanitize_config_entry
 from .const import (
-    CONF_NODE,
     CONF_TOKEN_ID,
     CONF_TOKEN_SECRET,
     DEFAULT_TIMEOUT,
     DEFAULT_VERIFY_SSL,
     DOMAIN,
-    NODE_ONLINE,
 )
 
 type ProxmoxConfigEntry = ConfigEntry[ProxmoxCoordinator]
@@ -214,7 +212,7 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
                 containers={
                     container.vmid: container for container in resources.containers
                 },
-                storages={s["storage"]: s for s in resources.storages},
+                storages={s.storage: s for s in resources.storages.storages},
                 backups=resources.backups,
             )
 
@@ -259,7 +257,7 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
                 raise ProxmoxPermissionsError from err
             raise ProxmoxServerError from err
 
-    async def _fetch_all_nodes(self) -> list[tuple[NodeResource, NodeResources]]:
+    async def _fetch_all_nodes(self) -> list[tuple[ClusterNodeResource, NodeResources]]:
         """Fetch all nodes with their VMs, containers, storages, and backups."""
         nodes = self.proxmox.cluster_cache.nodes.values()
         tasks = [self._get_node_data(node) for node in nodes]
@@ -268,7 +266,7 @@ class ProxmoxCoordinator(DataUpdateCoordinator[dict[str, ProxmoxNodeData]]):
 
     async def _get_node_data(
         self,
-        node: NodeResource,
+        node: ClusterNodeResource,
     ) -> NodeResources:
         """Get vms, containers, storages, and backups for a node."""
         node_name = node.node

@@ -27,6 +27,7 @@ from .entity import (
     ProxmoxVMEntity,
 )
 
+
 PARALLEL_UPDATES = 0
 
 
@@ -420,7 +421,7 @@ STORAGE_SENSORS: tuple[ProxmoxStorageSensorEntityDescription, ...] = (
     ProxmoxStorageSensorEntityDescription(
         key="storage_used",
         translation_key="storage_used",
-        value_fn=lambda data: data["used"],
+        value_fn=lambda data: data.used,
         device_class=SensorDeviceClass.DATA_SIZE,
         native_unit_of_measurement=UnitOfInformation.BYTES,
         suggested_unit_of_measurement=UnitOfInformation.GIBIBYTES,
@@ -431,7 +432,7 @@ STORAGE_SENSORS: tuple[ProxmoxStorageSensorEntityDescription, ...] = (
     ProxmoxStorageSensorEntityDescription(
         key="storage_total",
         translation_key="storage_total",
-        value_fn=lambda data: data["total"],
+        value_fn=lambda data: data.total,
         device_class=SensorDeviceClass.DATA_SIZE,
         native_unit_of_measurement=UnitOfInformation.BYTES,
         suggested_unit_of_measurement=UnitOfInformation.GIBIBYTES,
@@ -442,7 +443,7 @@ STORAGE_SENSORS: tuple[ProxmoxStorageSensorEntityDescription, ...] = (
     ProxmoxStorageSensorEntityDescription(
         key="storage_available",
         translation_key="storage_available",
-        value_fn=lambda data: data["avail"],
+        value_fn=lambda data: data.avail,
         device_class=SensorDeviceClass.DATA_SIZE,
         native_unit_of_measurement=UnitOfInformation.BYTES,
         suggested_unit_of_measurement=UnitOfInformation.GIBIBYTES,
@@ -455,7 +456,7 @@ STORAGE_SENSORS: tuple[ProxmoxStorageSensorEntityDescription, ...] = (
         translation_key="storage_used_percentage",
         value_fn=lambda data: (
             round(value * 100, 1)
-            if (value := data.get("used_fraction")) is not None
+            if (value := data.used_fraction) is not None or 0.0
             else None
         ),
         native_unit_of_measurement=PERCENTAGE,
@@ -480,9 +481,9 @@ async def async_setup_entry(
             for node in nodes
             for entity_description in NODE_SENSORS
             if coordinator.permissions.has_node_permission(
-                    node.node.node,
-                    entity_description.permission,
-                )
+                node.node.node,
+                entity_description.permission,
+            )
         )
 
     def _async_add_new_vms(

@@ -13,8 +13,9 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from aioproxmox.model.pve import OperationalStatus
+
 from .const import (
-    NODE_ONLINE,
     STATUS_OK,
     STORAGE_ACTIVE,
     STORAGE_ENABLED,
@@ -67,7 +68,7 @@ NODE_SENSORS: tuple[ProxmoxNodeBinarySensorEntityDescription, ...] = (
     ProxmoxNodeBinarySensorEntityDescription(
         key="status",
         translation_key="status",
-        state_fn=lambda data: data.node["status"] == NODE_ONLINE,
+        state_fn=lambda data: data.node.status == OperationalStatus.ONLINE,
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         permission=ProxmoxPermission.VMAUDIT,  # PVEVMUsers are allowed this node, through "/vms"
@@ -77,7 +78,7 @@ NODE_SENSORS: tuple[ProxmoxNodeBinarySensorEntityDescription, ...] = (
         key="node_backup_status",
         translation_key="node_backup_status",
         state_fn=lambda data: bool(
-            data.backups and data.backups[0]["status"] != STATUS_OK
+            data.backups and data.backups[0].status != STATUS_OK
         ),
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -109,19 +110,19 @@ STORAGE_SENSORS: tuple[ProxmoxStorageBinarySensorEntityDescription, ...] = (
     ProxmoxStorageBinarySensorEntityDescription(
         key="storage_active",
         translation_key="storage_active",
-        state_fn=lambda data: data["active"] == STORAGE_ACTIVE,
+        state_fn=lambda data: data.active == STORAGE_ACTIVE,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ProxmoxStorageBinarySensorEntityDescription(
         key="storage_enabled",
         translation_key="storage_enabled",
-        state_fn=lambda data: data["enabled"] == STORAGE_ENABLED,
+        state_fn=lambda data: data.enabled == STORAGE_ENABLED,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     ProxmoxStorageBinarySensorEntityDescription(
         key="storage_shared",
         translation_key="storage_shared",
-        state_fn=lambda data: data["shared"] == STORAGE_SHARED,
+        state_fn=lambda data: data.shared == STORAGE_SHARED,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
 )
@@ -145,7 +146,7 @@ async def async_setup_entry(
             if coordinator.permissions.has_node_permission(
                 node.node.node,
                 entity_description.permission,
-                )
+            )
         )
 
     def _async_add_new_vms(
