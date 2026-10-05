@@ -7,7 +7,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, NODE_ONLINE
 from .coordinator import (
     ProxmoxCoordinator,
     ProxmoxNodeData,
@@ -49,7 +49,12 @@ class ProxmoxNodeEntity(ProxmoxCoordinatorEntity):
     @override
     def available(self) -> bool:
         """Return if the device is available."""
-        return super().available and self.device_name in self.coordinator.data
+        return (
+            super().available
+            and self.device_name in self.coordinator.data
+            and self.coordinator.data[self.device_name].node.get("status")
+            == NODE_ONLINE
+        )
 
 
 class ProxmoxStorageEntity(ProxmoxCoordinatorEntity):
