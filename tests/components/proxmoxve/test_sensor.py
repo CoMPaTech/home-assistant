@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from homeassistant.components.proxmoxve.const import NODE_ONLINE
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -111,7 +110,7 @@ async def test_offline_node_sensors_unavailable(
         await setup_integration(hass, mock_config_entry)
 
     state = hass.states.get("sensor.pve3_status")
-    assert state.state != NODE_ONLINE
+    assert state.state == STATE_UNAVAILABLE
 
     state = hass.states.get("sensor.pve3_cpu_usage")
     assert state.state == STATE_UNAVAILABLE

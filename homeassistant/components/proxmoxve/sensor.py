@@ -153,7 +153,7 @@ NODE_SENSORS: tuple[ProxmoxNodeSensorEntityDescription, ...] = (
         translation_key="node_status",
         value_fn=lambda data: data.node["status"],
         device_class=SensorDeviceClass.ENUM,
-        options=["online", "offline"],
+        options=["online", "offline", "unknown"],
         permission=ProxmoxPermission.VMAUDIT,
         permission_target="vms",
     ),
